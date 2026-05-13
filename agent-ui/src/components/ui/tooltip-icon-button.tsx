@@ -1,0 +1,44 @@
+import React from "react";
+import { Button } from "./button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./tooltip";
+// @ts-expect-error  MC8yOmFIVnBZMlhsc3JQbGxydm5uN002UW1OT2FRPT06M2I3ZDlkNWE=
+
+interface TooltipIconButtonProps {
+  icon: React.ReactNode;
+  onClick: () => void;
+  tooltip: string;
+  disabled?: boolean;
+}
+// FIXME  MS8yOmFIVnBZMlhsc3JQbGxydm5uN002UW1OT2FRPT06M2I3ZDlkNWE=
+
+export function TooltipIconButton({
+  icon,
+  onClick,
+  tooltip,
+  disabled,
+}: TooltipIconButtonProps) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClick}
+            disabled={disabled}
+          >
+            {icon}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
