@@ -11,8 +11,8 @@ class VectorStore(ABC):
     """向量数据库通用抽象接口"""
 
     @abstractmethod
-    def insert(self, data: list[list[Any]]) -> None:
-        """批量插入数据"""
+    def insert(self, data: list[list[Any]], columns: list[str] | None = None) -> None:
+        """批量插入数据，columns 指定字段名（跳过 auto-generated 字段时必传）"""
         raise NotImplementedError
 
     @abstractmethod

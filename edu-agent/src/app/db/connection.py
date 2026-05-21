@@ -35,21 +35,25 @@ class MilvusConnectionManager:
         return self._connected
 
     def connect(self) -> None:
-        """建立 Milvus 连接（幂等）"""
+        """建立 Milvus 连接（幂等，线程安全）"""
         if self._connected:
             return
 
-        from pymilvus import connections
+        with self._lock:
+            if self._connected:
+                return
 
-        connect_kwargs: dict[str, Any] = {"uri": settings.MILVUS_URL}
-        if settings.MILVUS_TOKEN:
-            connect_kwargs["token"] = settings.MILVUS_TOKEN
-        if settings.MILVUS_DB_NAME:
-            connect_kwargs["db_name"] = settings.MILVUS_DB_NAME
+            from pymilvus import connections
 
-        connections.connect(**connect_kwargs)
-        self._connected = True
-        logger.info("[MilvusConnection] 已连接: %s", settings.MILVUS_URL)
+            connect_kwargs: dict[str, Any] = {"uri": settings.MILVUS_URL}
+            if settings.MILVUS_TOKEN:
+                connect_kwargs["token"] = settings.MILVUS_TOKEN
+            if settings.MILVUS_DB_NAME:
+                connect_kwargs["db_name"] = settings.MILVUS_DB_NAME
+
+            connections.connect(**connect_kwargs)
+            self._connected = True
+            logger.info("[MilvusConnection] 已连接: %s", settings.MILVUS_URL)
 
     def ensure_connected(self) -> None:
         """确保连接已建立，未连接则自动连接"""

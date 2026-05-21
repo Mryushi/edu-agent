@@ -47,9 +47,16 @@ class Settings(BaseSettings):
 
     # RAG 知识库（独立 collection）
     MILVUS_RAG_COLLECTION: str = "edu_agent_rag"
-    RAG_CHUNK_SIZE: int = 512
-    RAG_CHUNK_OVERLAP: int = 64
+    RAG_CHUNK_SIZE: int = 800
+    RAG_CHUNK_OVERLAP: int = 100
+    RAG_CHUNK_MIN: int = 200
+    RAG_CHUNK_MAX_LEN: int = 4000
     RAG_TOP_K: int = 5
+
+    # RAG 混合检索：dense (qwen3-embedding) + sparse (Milvus BM25 Function)
+    RAG_DENSE_EMBEDDING_MODEL: str = "qwen3-embedding:0.6b"
+    RAG_DENSE_EMBEDDING_DIMS: int = 1024
+    RAG_HYBRID_FETCH_K: int = 20
 
     # mem0 LLM（提取记忆事实）
     MEMORY_LLM_MODEL: str
@@ -59,6 +66,7 @@ class Settings(BaseSettings):
     MEMORY_EMBEDDING_MODEL: str
     MEMORY_EMBEDDING_DIMS: int
     OLLAMA_BASE_URL: str
+    OLLAMA_MODEL: str = "deepseek-r1:8b"
 
     # MCP (Model Context Protocol) 服务器配置
     MCP_SERVERS_JSON: Optional[str] = None

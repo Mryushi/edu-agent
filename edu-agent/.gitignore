@@ -27,5 +27,24 @@ env/
 .coverage
 htmlcov/
 
+# Build
+dist/
+build/
+*.egg-info/
+*.egg
+
 # Logs
 *.log
+
+# LangGraph runtime
+.langgraph_api/
+
+# Workspace runtime artifacts
+src/app/workspace/uploads/
+src/app/workspace/parsed/
+src/app/workspace/report/
+src/app/workspace/**/node_modules/
+src/app/workspace/**/*.docx
+src/app/workspace/**/*.pptx
+src/app/workspace/**/*.pdf
+src/app/workspace/**/out.txt

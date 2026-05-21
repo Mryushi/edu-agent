@@ -41,7 +41,8 @@ def create_ollama_model():
     try:
         from langchain_ollama import ChatOllama
         model = ChatOllama(
-            model="deepseek-r1:8b",
+            model=settings.OLLAMA_MODEL,
+            base_url=settings.OLLAMA_BASE_URL,
             temperature=0.3,
         )
         model.profile = ModelProfile(max_input_tokens=120000)
@@ -54,7 +55,24 @@ def create_ollama_model():
         return None
 
 
+def create_rag_dense_embedder():
+    """创建 RAG 稠密向量嵌入模型（Ollama）"""
+    try:
+        from langchain_ollama import OllamaEmbeddings
+        return OllamaEmbeddings(
+            model=settings.RAG_DENSE_EMBEDDING_MODEL,
+            base_url=settings.OLLAMA_BASE_URL,
+        )
+    except ImportError:
+        logger.warning("langchain_ollama not available")
+        return None
+    except Exception as e:
+        logger.error(f"Failed to create RAG dense embedder: {e}")
+        return None
+
+
 image_llm_model = create_image_model()
 text_model = create_text_model()
 ollama_model = create_ollama_model()
+rag_dense_embedder = create_rag_dense_embedder()
 

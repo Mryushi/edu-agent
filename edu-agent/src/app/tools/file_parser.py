@@ -10,9 +10,11 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+
+from app.tools.parse_cache import compute_file_hash, find_cache_by_hash, get_cache_path, read_cache, write_cache
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +37,7 @@ class ParseResult:
     filename: str                      # 原始文件名
     extension: str                     # 文件后缀（小写）
     file_size: int                     # 文件大小（字节）
-    parsed_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    parsed_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     page_count: Optional[int] = None   # 页数（PDF 有效）
     error: Optional[str] = None        # 解析失败时的错误信息
 
@@ -47,7 +49,25 @@ class ParseResult:
 def _parse_with_pymupdf(file_path: str) -> str:
     """用 PyMuPDF4LLMLoader 解析 PDF/XPS/EPUB/图片等，输出 Markdown 文本。"""
     from langchain_pymupdf4llm import PyMuPDF4LLMLoader
-    docs = PyMuPDF4LLMLoader(file_path).load()
+    from app.core.config import settings
+
+    loader_kwargs = {
+        "mode": "single",
+        "table_strategy": "lines",
+    }
+
+    if settings.ENABLE_PDF_MULTIMODAL:
+        from langchain_community.document_loaders.parsers import LLMImageBlobParser
+        from app.core.llms import image_llm_model
+
+        image_parser = LLMImageBlobParser(
+            model=image_llm_model,
+            prompt=settings.IMAGE_PARSER_PROMPT,
+        )
+        loader_kwargs["extract_images"] = True
+        loader_kwargs["images_parser"] = image_parser
+
+    docs = PyMuPDF4LLMLoader(file_path, **loader_kwargs).load()
     return "\n\n".join(d.page_content for d in docs)
 
 
@@ -160,3 +180,66 @@ def parse_bytes(data: bytes, filename: str) -> ParseResult:
             os.unlink(tmp_path)
         except OSError:
             pass
+
+
+def parse_file_with_cache(file_path: str) -> ParseResult:
+    """
+    解析本地文件，优先使用基于 bytes hash 的缓存。
+
+    缓存命中时直接返回缓存文本，未命中时解析并写入缓存。
+    """
+    path = Path(file_path).resolve()
+    filename = path.name
+    ext = path.suffix.lower()
+
+    if not path.exists():
+        return ParseResult(text="", filename=filename, extension=ext,
+                           file_size=0, error=f"文件不存在: {file_path}")
+
+    if ext not in SUPPORTED_EXTENSIONS:
+        return ParseResult(text="", filename=filename, extension=ext,
+                           file_size=path.stat().st_size,
+                           error=f"不支持的文件格式: {ext}")
+
+    file_size = path.stat().st_size
+
+    # 计算 bytes hash（大文件采样，避免读取全部内容）
+    file_hash = compute_file_hash(path)
+    cache_path = get_cache_path(filename, file_hash)
+
+    cached = read_cache(cache_path)
+    if cached is None:
+        # 回退：文件名可能因上传后缀变化（如 实验4.pdf → 实验4_1.pdf），
+        # 用纯 hash 扫描匹配，不依赖文件名 stem
+        alt = find_cache_by_hash(file_hash)
+        if alt is not None:
+            cached = read_cache(alt)
+            if cached is not None:
+                cache_path = alt
+
+    if cached is not None:
+        logger.info("[FileParser] 缓存命中: %s -> %s", filename, cache_path)
+        return ParseResult(text=cached, filename=filename, extension=ext,
+                           file_size=file_size)
+
+    # 未命中 → 正常解析
+    result = parse_file(file_path)
+    if result.success:
+        write_cache(cache_path, result.text)
+
+    return result
+
+
+def get_parsed_pdf_path(file_path: str, file_hash: str = "") -> Path:
+    """根据原 PDF 文件路径和内容 hash 生成解析结果缓存文件路径。
+
+    优先返回已存在的缓存文件（支持跨文件名复用），不存在时返回预期路径。
+    """
+    path = Path(file_path).resolve()
+    if not file_hash:
+        file_hash = compute_file_hash(path)
+    expected = get_cache_path(path.name, file_hash)
+    if expected.exists():
+        return expected
+    alt = find_cache_by_hash(file_hash)
+    return alt if alt is not None else expected
