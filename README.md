@@ -20,17 +20,7 @@ uv sync
 
 # 开发模式（支持热重载，默认 localhost:2026）
 langgraph dev
-
-# 生产模式（Docker 容器）
-langgraph up
-
 ```
-
-> **Docker 网络提示**：`langgraph up` 在 Docker 容器内运行，容器内的 `localhost` 指向容器自身而非宿主机。若 Milvus、Ollama 等服务运行在宿主机上，需将 `.env` 中的 `localhost` 改为 `host.docker.internal`：
-> ```env
-> MILVUS_URL=http://host.docker.internal:19530
-> OLLAMA_BASE_URL=http://host.docker.internal:11434
-> ```
 
 服务默认运行在 http://localhost:2026
 
@@ -43,6 +33,39 @@ yarn dev               # 默认 http://localhost:3000
 ```
 
 在设置中填入后端地址和 Assistant ID 即可使用。
+
+### 3. Docker 部署（可选）
+
+使用 `langgraph up` 可将后端打包为 Docker 容器运行，适合生产环境部署。
+
+```bash
+cd edu-agent
+cp .env.example .env   # 编辑填入 API Key
+
+# 构建镜像并启动容器
+langgraph up
+```
+
+**网络配置**：容器内的 `localhost` 指向容器自身，若 Milvus、Ollama 等服务运行在宿主机上，需修改 `.env`：
+
+```env
+MILVUS_URL=http://host.docker.internal:19530
+OLLAMA_BASE_URL=http://host.docker.internal:11434
+```
+
+**Dockerfile 说明**（[edu-agent/Dockerfile](edu-agent/Dockerfile)）：
+- 基础镜像：`langchain/langgraph-api:3.13`（Wolfi Linux）
+- 安装 Node.js/npm（供 MCP stdio 工具使用）
+- 安装 spaCy 及英文模型
+- 修复 OpenSSL 3.x 兼容性（mem0 等库的传统哈希算法）
+
+**常用命令**：
+
+```bash
+langgraph up          # 启动容器（后台运行）
+langgraph down        # 停止并移除容器
+langgraph logs        # 查看容器日志
+```
 
 ## 核心特性
 
