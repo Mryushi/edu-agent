@@ -12,6 +12,3 @@ COPY . /deps
 
 # 安装 Python 依赖
 RUN cd /deps && pip install --no-cache-dir -e .
-
-# 安装 spaCy 及英文模型（用于 NLP 处理）
-RUN pip install --no-cache-dir spacy && python -m spacy download en_core_web_sm
