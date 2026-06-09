@@ -4,7 +4,7 @@
 基于 app.db 通用向量存储的领域封装，直接操作 mem0 和 Milvus。
 """
 
-from app.repositories.milvus_store import (
+from app.repositories.knowledge_repository import (
     KnowledgeRepository,
     get_knowledge_repository,
 )

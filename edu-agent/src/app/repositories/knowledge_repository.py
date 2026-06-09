@@ -179,12 +179,22 @@ class KnowledgeRepository:
         user_id: str,
         top_k: int,
         fetch_k: int,
+        doc_ids: list[str] | None = None,
     ) -> tuple[list[dict], bool]:
         """混合检索：dense ANN + sparse BM25，RRF 融合。
+
+        Args:
+            doc_ids: 可选，限制在指定文档中检索
 
         Returns:
             (命中列表, hybrid_success)。hybrid_success=False 表示底层已降级为 dense-only。
         """
+        # 构建过滤条件
+        filters = f'user_id == "{user_id}"'
+        if doc_ids:
+            doc_id_filter = ", ".join([f'"{did}"' for did in doc_ids])
+            filters += f' && doc_id in [{doc_id_filter}]'
+
         hits, hybrid_success = self._store.hybrid_search(
             dense_vector=dense_vector,
             query_text=query_text,
@@ -192,7 +202,7 @@ class KnowledgeRepository:
             sparse_field="sparse_vector",
             top_k=top_k,
             fetch_k=fetch_k,
-            filters=f'user_id == "{user_id}"',
+            filters=filters,
             output_fields=["text", "source", "doc_id", "chunk_index", "section_path"],
             dense_metric=settings.MILVUS_METRIC_TYPE,
         )
@@ -218,20 +228,19 @@ class KnowledgeRepository:
             expr=f'user_id == "{user_id}"',
             output_fields=["doc_id", "source", "chunk_index", "created_at"],
         )
-        docs: dict[str, dict] = {}
+        # Python 端按 doc_id 聚合
+        grouped: dict[str, dict] = {}
         for r in res:
             did = r["doc_id"]
-            if did not in docs:
-                docs[did] = {
+            if did not in grouped:
+                grouped[did] = {
                     "doc_id": did,
                     "source": r["source"],
                     "chunk_count": 0,
                     "created_at": r["created_at"],
                 }
-            docs[did]["chunk_count"] += 1
-            if r["created_at"] < docs[did]["created_at"]:
-                docs[did]["created_at"] = r["created_at"]
-        return sorted(docs.values(), key=lambda x: x["created_at"], reverse=True)
+            grouped[did]["chunk_count"] += 1
+        return sorted(grouped.values(), key=lambda x: x["created_at"], reverse=True)
 
 
 # ------------------------------------------------------------------ #

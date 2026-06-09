@@ -1,17 +1,23 @@
 """
 智能对话Agent系统
 """
+from dataclasses import dataclass
 from pathlib import Path
 
 from deepagents import create_deep_agent as create_agent
 from deepagents.backends import FilesystemBackend, LocalShellBackend, CompositeBackend
 from deepagents.middleware import SkillsMiddleware
 from langchain.agents.middleware import ModelRequest, ModelResponse, wrap_model_call
-
 from app.core.llms import image_llm_model, text_model
 from app.middleware.pdf_context import PDFContextMiddleware
 from app.agents.tools import TOOLS
 from app.agents.mcp_tools import get_mcp_tools_cached
+
+
+@dataclass
+class AgentContext:
+    """运行时上下文，从 config.configurable 自动填充。"""
+    user_id: str = "default"
 
 _PROMPT_FILE = Path(__file__).resolve().parent / "prompts" / "system_prompt.md"
 SYSTEM_PROMPT = _PROMPT_FILE.read_text(encoding="utf-8")
@@ -83,6 +89,7 @@ composite_backend = CompositeBackend(
         "/": file_backend,
     },
 )
+
 agent = create_agent(
     model=text_model,
     tools=tools,
@@ -94,4 +101,6 @@ agent = create_agent(
     ],
     backend=composite_backend,
     system_prompt=SYSTEM_PROMPT,
+    context_schema=AgentContext,
+
 )

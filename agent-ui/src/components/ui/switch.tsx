@@ -5,7 +5,6 @@ import * as SwitchPrimitive from "@radix-ui/react-switch";
 // NOTE  MC8yOmFIVnBZMlhsc3JQbGxydm5uN002YkZsM1ZnPT06NTM5YTkwZTA=
 
 import { cn } from "@/lib/utils";
-// @ts-expect-error  MS8yOmFIVnBZMlhsc3JQbGxydm5uN002YkZsM1ZnPT06NTM5YTkwZTA=
 
 function Switch({
   className,

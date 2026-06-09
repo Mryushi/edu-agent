@@ -26,7 +26,6 @@ export interface TodoItem {
   status: "pending" | "in_progress" | "completed";
   updatedAt?: Date;
 }
-// @ts-expect-error  MC8yOmFIVnBZMlhsc3JQbGxydm5uN002ZEZoTGRBPT06MTA4NDkxYmE=
 
 export interface Thread {
   id: string;

@@ -1,0 +1,16 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "edu_agent": {
+      "path": "./src/app/agents/agent.py:agent"
+    }
+  },
+  "env": ".env",
+  "python_version": "3.13",
+  "image_distro": "wolfi",
+  "dockerfile_lines": [
+    "RUN apk add --no-cache nodejs npm",
+    "ENV OPENSSL_CONF=/dev/null",
+    "RUN pip install --no-cache-dir spacy && python -m spacy download en_core_web_sm"
+  ]
+}

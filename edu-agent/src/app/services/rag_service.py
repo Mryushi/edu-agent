@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from app.core.config import settings
 from app.core.llms import rag_dense_embedder
-from app.repositories.milvus_store import get_knowledge_repository
+from app.repositories.knowledge_repository import get_knowledge_repository
 from app.tools.chunking import Chunk, make_doc_id, split_text
 from app.tools.file_parser import parse_bytes
 
@@ -349,28 +349,104 @@ def search_knowledge(query: str, user_id: str, top_k: int | None = None) -> str:
         return f"知识库检索失败：{e}"
 
 
-_MEMORY_APPENDIX_MAX_DOCS = 3
-_MEMORY_APPENDIX_MAX_LINES_PER_DOC = 3
+def search_by_doc_ids(
+    query: str,
+    user_id: str,
+    doc_ids: list[str],
+    top_k: int = 5
+) -> str:
+    """在指定文档中检索与查询最相关的内容。
+
+    用于"记忆先行"检索：先从记忆中找到相关文档，再在这些文档中检索内容。
+
+    Args:
+        query: 检索查询
+        user_id: 用户唯一标识
+        doc_ids: 限制检索的文档 ID 列表
+        top_k: 返回结果数量
+
+    Returns:
+        格式化的检索结果
+    """
+    try:
+        if not doc_ids:
+            return "未指定文档 ID。"
+
+        fetch_k = max(settings.RAG_HYBRID_FETCH_K, top_k * 2)
+
+        t0 = time.perf_counter()
+        dense_vec = _embed([query])[0]
+        hits, hybrid_success = _get_repo().hybrid_search(
+            dense_vector=dense_vec,
+            query_text=query,
+            user_id=user_id,
+            top_k=top_k,
+            fetch_k=fetch_k,
+            doc_ids=doc_ids,
+        )
+        elapsed_ms = int((time.perf_counter() - t0) * 1000)
+
+        logger.info(
+            "[search_by_doc_ids] user=%s doc_ids=%s top_k=%d hits=%d cost_ms=%d query=%r",
+            user_id, doc_ids, top_k, len(hits), elapsed_ms, query,
+        )
+
+        if not hits:
+            return "在指定文档中未找到相关内容。"
+
+        lines = []
+        for i, h in enumerate(hits, 1):
+            section = f" [{h['section_path']}]" if h.get("section_path") else ""
+            lines.append(
+                f"[{i}] 来源：{h['source']}（片段 {h['chunk_index']}）{section}\n{h['text']}"
+            )
+        result = "\n\n".join(lines)
+
+        if not hybrid_success:
+            result += "\n\n[提示] hybrid 检索失败，已降级为 dense-only，结果可能不包含关键词召回。"
+        return result
+
+    except Exception as e:
+        logger.error("[search_by_doc_ids] 失败: %s", e)
+        return f"文档检索失败：{e}"
+
+
+_MEMORY_APPENDIX_MAX_DOCS = 10
+_MEMORY_APPENDIX_MAX_LINES_PER_DOC = 10
 
 
 def _build_memory_appendix(user_id: str, hits: list[dict]) -> str:
     """为检索命中的文档附带其关联长期记忆，并限制总输出量。"""
-    from app.services.memory_service import list_memories_by_doc
+    from app.services.memory_service import get_memories_by_doc_ids
 
-    seen: list[tuple[str, str]] = []
+    # 提取去重的 doc_id（最多 3 个）
+    doc_ids: list[str] = []
+    doc_id_to_source: dict[str, str] = {}
     for h in hits:
-        key = (h["doc_id"], h["source"])
-        if key not in seen:
-            seen.append(key)
-        if len(seen) >= _MEMORY_APPENDIX_MAX_DOCS:
+        doc_id = h["doc_id"]
+        if doc_id not in doc_id_to_source:
+            doc_id_to_source[doc_id] = h["source"]
+            doc_ids.append(doc_id)
+        if len(doc_ids) >= _MEMORY_APPENDIX_MAX_DOCS:
             break
 
+    if not doc_ids:
+        return ""
+
+    # 批量获取记忆（避免全量扫描）
+    memories_by_doc = get_memories_by_doc_ids(user_id, doc_ids)
+
+    # 格式化输出
     sections: list[str] = []
-    for doc_id, source in seen:
-        memories = list_memories_by_doc(user_id, doc_id)
-        if not memories or "暂无关联记忆" in memories or "获取文档关联记忆失败" in memories:
+    for doc_id in doc_ids:
+        memories = memories_by_doc.get(doc_id, [])
+        if not memories:
             continue
-        memory_lines = memories.splitlines()[:_MEMORY_APPENDIX_MAX_LINES_PER_DOC]
+        memory_lines = [
+            f"{i + 1}. [{m.get('metadata', {}).get('category', '—')}] {m.get('memory', '')}"
+            for i, m in enumerate(memories[:_MEMORY_APPENDIX_MAX_LINES_PER_DOC])
+        ]
+        source = doc_id_to_source.get(doc_id, doc_id)
         sections.append(f"### 关联记忆（文档: {source}）\n" + "\n".join(memory_lines))
 
     return "\n\n".join(sections)

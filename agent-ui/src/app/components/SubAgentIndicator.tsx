@@ -11,7 +11,6 @@ interface SubAgentIndicatorProps {
   onClick: () => void;
   isExpanded?: boolean;
 }
-// @ts-expect-error  MS8yOmFIVnBZMlhsc3JQbGxydm5uN002Y201d1dRPT06ZWZjYTRhNmY=
 
 export const SubAgentIndicator = React.memo<SubAgentIndicatorProps>(
   ({ subAgent, onClick, isExpanded = true }) => {

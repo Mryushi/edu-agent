@@ -1,5 +1,4 @@
 "use client";
-// @ts-expect-error  MC8zOmFIVnBZMlhsc3JQbGxydm5uN002WTI5dk9RPT06MDQ2NDllODU=
 
 import * as React from "react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";

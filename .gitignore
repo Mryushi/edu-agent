@@ -10,3 +10,10 @@
 # OS
 .DS_Store
 Thumbs.db
+
+# Project specific
+agent-ui/graphify-out/
+docs/
+CLAUDE.md
+AGENTS.md
+edu-agent/tests/

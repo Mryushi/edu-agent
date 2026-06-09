@@ -3,7 +3,6 @@ import { File, X as XIcon } from "lucide-react";
 import { ContentBlock } from "@langchain/core/messages";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-// @ts-expect-error  MC8zOmFIVnBZMlhsc3JQbGxydm5uN002ZFVaVFN3PT06YTcyZDI5NmM=
 
 export interface MultimodalPreviewProps {
   block: ContentBlock.Multimodal.Data;

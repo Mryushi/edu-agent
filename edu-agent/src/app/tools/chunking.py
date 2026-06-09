@@ -224,12 +224,23 @@ def _chunk_section(
     chunks: list[str] = []
     buffer = ""
 
+    # 使用偏移量跟踪，避免重复文本导致 find() 返回错误位置
+    current_offset = 0
+
     for para in paragraphs:
         para = para.strip()
         if not para:
             continue
 
-        para_start_in_body = body.find(para)
+        # 从 current_offset 开始查找，确保定位准确
+        para_start_in_body = body.find(para, current_offset)
+        if para_start_in_body < 0:
+            para_start_in_body = current_offset
+
+        # 更新偏移量到当前段落结束位置
+        current_offset = para_start_in_body + len(para)
+
+        # 判断段落是否在受保护区间内
         if para_start_in_body >= 0 and _is_inside_protected(
             para_start_in_body + len(para) // 2, section_protected
         ):

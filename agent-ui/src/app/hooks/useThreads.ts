@@ -15,11 +15,11 @@ export interface ThreadItem {
 // eslint-disable  MS80OmFIVnBZMlhsc3JQbGxydm5uN002ZDNOUlZRPT06M2YzZjZiY2Y=
 
 const DEFAULT_PAGE_SIZE = 20;
-// @ts-expect-error  Mi80OmFIVnBZMlhsc3JQbGxydm5uN002ZDNOUlZRPT06M2YzZjZiY2Y=
 
 export function useThreads(props: {
   status?: Thread["status"];
   limit?: number;
+  userId?: string;
 }) {
   const pageSize = props.limit || DEFAULT_PAGE_SIZE;
 
@@ -83,9 +83,10 @@ export function useThreads(props: {
         sortBy: "updated_at" as const,
         sortOrder: "desc" as const,
         status,
-        // Only filter by assistant_id metadata for deployed graphs (UUIDs)
-        // Local dev graphs don't set this metadata
-        ...(isUUID ? { metadata: { assistant_id: assistantId } } : {}),
+        metadata: {
+          ...(isUUID ? { assistant_id: assistantId } : {}),
+          ...(props.userId ? { user_id: props.userId } : {}),
+        },
       });
 
       return threads.map((thread): ThreadItem => {

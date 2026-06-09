@@ -91,7 +91,6 @@ function areUiEntriesEqual(prevUi?: any[], nextUi?: any[]) {
 
   return prevUi.every((entry, index) => entry === nextUi[index]);
 }
-// @ts-expect-error  Mi80OmFIVnBZMlhsc3JQbGxydm5uN002VEdoWWRnPT06MTg0N2UyMDk=
 
 export const ChatMessage = React.memo<ChatMessageProps>(
   ({

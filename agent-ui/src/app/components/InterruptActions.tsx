@@ -1,5 +1,4 @@
 "use client";
-// @ts-expect-error  MC80OmFIVnBZMlhsc3JQbGxydm5uN002VGs5VU5BPT06ZGZlYzIwM2Q=
 
 import React, { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";

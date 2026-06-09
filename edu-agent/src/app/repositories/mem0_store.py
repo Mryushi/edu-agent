@@ -34,6 +34,10 @@ class MemoryRepository:
         """全量列出符合条件的记忆。"""
         return self._mem.get_all(filters=filters)
 
+    def get(self, memory_id: str) -> dict:
+        """根据 memory_id 获取单条记忆。"""
+        return self._mem.get(memory_id)
+
     def delete(self, memory_id: str) -> dict:
         """根据 memory_id 删除单条记忆。"""
         return self._mem.delete(memory_id)
@@ -55,7 +59,7 @@ def get_memory_repository() -> MemoryRepository:
     if _repo_instance is None:
         config = settings.get_mem0_config()
         logger.info("[mem0] 初始化 Memory，Milvus: %s，collection: %s",
-                    settings.MILVUS_URL, settings.MILVUS_COLLECTION)
+                    settings.MILVUS_URL, settings.MEM0_COLLECTION)
         mem = Memory.from_config(config)
         _repo_instance = MemoryRepository(mem)
     return _repo_instance

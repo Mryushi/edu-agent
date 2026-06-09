@@ -1,7 +1,6 @@
 import { Message } from "@langchain/langgraph-sdk";
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-// @ts-expect-error  MC80OmFIVnBZMlhsc3JQbGxydm5uN002TmxOeFRRPT06ZTBiYjVlMDk=
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -62,7 +61,6 @@ export function extractSubAgentContent(data: unknown): string {
   // Fallback for any other type
   return JSON.stringify(data, null, 2);
 }
-// @ts-expect-error  Mi80OmFIVnBZMlhsc3JQbGxydm5uN002TmxOeFRRPT06ZTBiYjVlMDk=
 
 export function isPreparingToCallTaskTool(messages: Message[]): boolean {
   const lastMessage = messages[messages.length - 1];
@@ -157,5 +155,46 @@ export function formatMessageForLLM(message: Message): string {
 export function formatConversationForLLM(messages: Message[]): string {
   const formattedMessages = messages.map(formatMessageForLLM);
   return formattedMessages.join("\n\n---\n\n");
+}
+
+// Common image file extensions
+const IMAGE_EXTS = new Set([
+  "png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico", "tiff", "tif", "avif",
+]);
+
+function isImageUrl(url: string): boolean {
+  try {
+    const pathname = new URL(url).pathname.toLowerCase();
+    const ext = pathname.split(".").pop() || "";
+    if (IMAGE_EXTS.has(ext)) return true;
+    // Some CDNs don't use file extensions; check common path segments
+    const imagePatterns = [
+      "/image/", "/img/", "/photo/", "/pic/", "/figure/",
+      "/drawing/", "/chart/", "/diagram/", "/graph/", "/illustration/",
+      "/capture/", "/screenshot/", "/afts/img/",
+    ];
+    return imagePatterns.some((p) => pathname.includes(p));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Detects bare image URLs in text and wraps them in markdown image syntax
+ * so they can be rendered as inline images.
+ *
+ * Skips URLs already wrapped in `![...](...)` or `[...](...)` markdown syntax.
+ */
+export function processImageUrlsInText(text: string): string {
+  // Match URLs that are NOT already inside markdown link syntax `...](url)`
+  // Strategy: split on markdown link patterns, process only the non-link parts
+  const urlRe = /(https?:\/\/[^\s<>)]+)/g;
+  return text.replace(urlRe, (url, offset) => {
+    if (!isImageUrl(url)) return url;
+    // Check if this URL is preceded by `](` (already a markdown link/image)
+    const prefix = text.slice(Math.max(0, offset - 2), offset);
+    if (prefix === "](") return url;
+    return `![image](${url})`;
+  });
 }
 // FIXME  My80OmFIVnBZMlhsc3JQbGxydm5uN002TmxOeFRRPT06ZTBiYjVlMDk=

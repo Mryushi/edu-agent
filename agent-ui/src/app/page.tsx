@@ -5,10 +5,11 @@ import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useQueryState } from "nuqs";
 import { getConfig, saveConfig, StandaloneConfig } from "@/lib/config";
 import { ConfigDialog } from "@/app/components/ConfigDialog";
+import { LoginDialog } from "@/app/components/LoginDialog";
 import { Button } from "@/components/ui/button";
 import { Assistant } from "@langchain/langgraph-sdk";
 import { ClientProvider, useClient } from "@/providers/ClientProvider";
-import { Settings, MessagesSquare, SquarePen } from "lucide-react";
+import { Settings, MessagesSquare, SquarePen, LogOut, User } from "lucide-react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -18,11 +19,15 @@ import { ThreadList } from "@/app/components/ThreadList";
 import { ChatProvider } from "@/providers/ChatProvider";
 import { ChatInterface } from "@/app/components/ChatInterface";
 
+const USER_ID_KEY = "edu-agent-user-id";
+
 interface HomePageInnerProps {
   config: StandaloneConfig;
   configDialogOpen: boolean;
   setConfigDialogOpen: (open: boolean) => void;
   handleSaveConfig: (config: StandaloneConfig) => void;
+  userId: string;
+  onLogout: () => void;
 }
 // eslint-disable  MS80OmFIVnBZMlhsc3JQbGxydm5uN002TnpGdU13PT06MDBhZjM4YTg=
 
@@ -31,6 +36,8 @@ function HomePageInner({
   configDialogOpen,
   setConfigDialogOpen,
   handleSaveConfig,
+  userId,
+  onLogout,
 }: HomePageInnerProps) {
   const client = useClient();
   const [threadId, setThreadId] = useQueryState("threadId");
@@ -134,10 +141,6 @@ function HomePageInner({
             )}
           </div>
           <div className="flex items-center gap-2">
-            <div className="text-sm text-muted-foreground">
-              <span className="font-medium">助手:</span>{" "}
-              {config.assistantId}
-            </div>
             <Button
               variant="outline"
               size="sm"
@@ -155,6 +158,14 @@ function HomePageInner({
             >
               <SquarePen className="mr-2 h-4 w-4" />
               新建对话
+            </Button>
+            <div className="mx-1 h-5 w-px bg-border" />
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <User className="h-4 w-4" />
+              <span className="font-medium">{userId}</span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={onLogout} title="退出登录">
+              <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </header>
@@ -180,6 +191,7 @@ function HomePageInner({
                     onMutateReady={(fn) => setMutateThreads(() => fn)}
                     onClose={() => setSidebar(null)}
                     onInterruptCountChange={setInterruptCount}
+                    userId={userId}
                   />
                 </ResizablePanel>
                 <ResizableHandle />
@@ -194,6 +206,7 @@ function HomePageInner({
               <ChatProvider
                 activeAssistant={assistant}
                 onHistoryRevalidate={() => mutateThreads?.()}
+                userId={userId}
               >
                 <ChatInterface assistant={assistant} />
               </ChatProvider>
@@ -210,8 +223,9 @@ function HomePageContent() {
   const [config, setConfig] = useState<StandaloneConfig | null>(null);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [assistantId, setAssistantId] = useQueryState("assistantId");
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // On mount, check for saved config, otherwise show config dialog
+  // On mount, check for saved config and userId
   useEffect(() => {
     const savedConfig = getConfig();
     if (savedConfig) {
@@ -222,6 +236,8 @@ function HomePageContent() {
     } else {
       setConfigDialogOpen(true);
     }
+    const storedUserId = localStorage.getItem(USER_ID_KEY);
+    if (storedUserId) setUserId(storedUserId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -237,8 +253,23 @@ function HomePageContent() {
     setConfig(newConfig);
   }, []);
 
+  const handleLogin = useCallback((id: string) => {
+    localStorage.setItem(USER_ID_KEY, id);
+    setUserId(id);
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem(USER_ID_KEY);
+    setUserId(null);
+  }, []);
+
   const langsmithApiKey =
     config?.langsmithApiKey || process.env.NEXT_PUBLIC_LANGSMITH_API_KEY || "";
+
+  // Not logged in → show login dialog
+  if (!userId) {
+    return <LoginDialog open={true} onLogin={handleLogin} />;
+  }
 
   if (!config) {
     return (
@@ -276,6 +307,8 @@ function HomePageContent() {
         configDialogOpen={configDialogOpen}
         setConfigDialogOpen={setConfigDialogOpen}
         handleSaveConfig={handleSaveConfig}
+        userId={userId}
+        onLogout={handleLogout}
       />
     </ClientProvider>
   );

@@ -1,0 +1,15 @@
+# 启动方式:
+#   1. 先启动后端: cd edu-agent && langgraph up -d
+#   2. 再启动前端: docker compose up -d
+
+services:
+  # 前端 UI
+  agent-ui:
+    build:
+      context: ./agent-ui
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      # langgraph up 默认端口 8123，连接宿主机上的 LangGraph API
+      NEXT_PUBLIC_LANGGRAPH_API_URL: http://host.docker.internal:8123

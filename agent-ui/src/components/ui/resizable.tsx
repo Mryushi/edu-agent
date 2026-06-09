@@ -2,7 +2,6 @@
 
 import { GripVertical } from "lucide-react";
 import * as ResizablePrimitive from "react-resizable-panels";
-// @ts-expect-error  MC8yOmFIVnBZMlhsc3JQbGxydm5uN002V1dWUE1BPT06Mjk1ZTA2NzE=
 
 import { cn } from "@/lib/utils";
 
@@ -20,7 +19,6 @@ const ResizablePanelGroup = ({
 );
 
 const ResizablePanel = ResizablePrimitive.Panel;
-// @ts-expect-error  MS8yOmFIVnBZMlhsc3JQbGxydm5uN002V1dWUE1BPT06Mjk1ZTA2NzE=
 
 const ResizableHandle = ({
   withHandle,

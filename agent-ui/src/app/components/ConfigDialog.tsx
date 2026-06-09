@@ -1,5 +1,4 @@
 "use client";
-// @ts-expect-error  MC80OmFIVnBZMlhsc3JQbGxydm5uN002TkVFM1FnPT06ZmE4MDIxYTQ=
 
 import { useState, useEffect } from "react";
 import {
@@ -14,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { StandaloneConfig } from "@/lib/config";
-// @ts-expect-error  MS80OmFIVnBZMlhsc3JQbGxydm5uN002TkVFM1FnPT06ZmE4MDIxYTQ=
 
 interface ConfigDialogProps {
   open: boolean;

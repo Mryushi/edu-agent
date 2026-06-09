@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 const Select = SelectPrimitive.Root;
 
 const SelectGroup = SelectPrimitive.Group;
-// @ts-expect-error  MS80OmFIVnBZMlhsc3JQbGxydm5uN002Y2xreE1RPT06NDkyZDNkMjE=
 
 const SelectValue = SelectPrimitive.Value;
 
@@ -100,7 +99,6 @@ const SelectContent = React.forwardRef<
   </SelectPrimitive.Portal>
 ));
 SelectContent.displayName = SelectPrimitive.Content.displayName;
-// @ts-expect-error  Mi80OmFIVnBZMlhsc3JQbGxydm5uN002Y2xreE1RPT06NDkyZDNkMjE=
 
 const SelectLabel = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Label>,

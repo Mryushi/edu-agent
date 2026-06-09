@@ -25,4 +25,3 @@ const Label = React.forwardRef<
 Label.displayName = LabelPrimitive.Root.displayName;
 
 export { Label };
-// @ts-expect-error  MS8yOmFIVnBZMlhsc3JQbGxydm5uN002T0VaMGNRPT06ODM3ZmFhNGQ=

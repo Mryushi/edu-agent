@@ -75,8 +75,11 @@ class PDFContextMiddleware(AgentMiddleware):
 
             try:
                 file_path.write_bytes(pdf_bytes)
-                saved_files.append((filename, str(file_path)))
-                logger.info("[PDFContextMiddleware] PDF 已保存: %s", file_path)
+                # 传虚拟路径（/uploads/xxx.pdf），而非物理绝对路径
+                # parse_pdf / ingest_document 会自动将虚拟路径映射到 workspace 目录
+                virtual_path = f"/uploads/{file_path.name}"
+                saved_files.append((filename, virtual_path))
+                logger.info("[PDFContextMiddleware] PDF 已保存: %s (虚拟路径: %s)", file_path, virtual_path)
             except Exception as e:
                 logger.warning("[PDFContextMiddleware] PDF 保存失败: %s", e)
 

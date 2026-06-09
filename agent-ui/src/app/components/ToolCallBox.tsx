@@ -19,6 +19,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { ToolCall, ActionRequest, ReviewConfig } from "@/app/types/types";
 import { cn } from "@/lib/utils";
+import { processImageUrlsInText } from "@/app/utils/utils";
+import { MarkdownContent } from "@/app/components/MarkdownContent";
 import { LoadExternalComponent } from "@langchain/langgraph-sdk/react-ui";
 import { ToolApprovalInterrupt } from "@/app/components/ToolApprovalInterrupt";
 // TODO  MC80OmFIVnBZMlhsc3JQbGxydm5uN002WmpoVk13PT06NTlmYTM3NjU=
@@ -262,10 +264,11 @@ export const ToolCallBox = React.memo<ToolCallBoxProps>(
                     <h4 className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       结果
                     </h4>
-                    <div className="max-h-96 overflow-y-auto rounded-sm border border-border bg-muted/40">
-                      <pre className="m-0 overflow-x-auto whitespace-pre p-2 font-mono text-xs leading-7 text-foreground">
-                        {serializedResult}
-                      </pre>
+                    <div className="max-h-96 overflow-y-auto rounded-sm border border-border bg-muted/40 p-2">
+                      <MarkdownContent
+                        content={processImageUrlsInText(serializedResult)}
+                        className="text-xs"
+                      />
                     </div>
                   </div>
                 )}

@@ -276,8 +276,23 @@ class MilvusVectorStore(VectorStore):
     def delete(self, expr: str) -> None:
         self._collection.delete(expr)
 
-    def query(self, expr: str, output_fields: Optional[list[str]] = None) -> list[dict[str, Any]]:
-        return self._collection.query(expr=expr, output_fields=output_fields or [])
+    def query(
+        self,
+        expr: str,
+        output_fields: Optional[list[str]] = None,
+        group_by_field: Optional[str] = None,
+    ) -> list[dict[str, Any]]:
+        """查询数据。
+
+        Args:
+            expr: 过滤表达式
+            output_fields: 返回字段列表
+            group_by_field: 分组字段（Milvus 2.3+ 支持）
+        """
+        kwargs = {"expr": expr, "output_fields": output_fields or []}
+        if group_by_field:
+            kwargs["group_by_field"] = group_by_field
+        return self._collection.query(**kwargs)
 
     def flush(self) -> None:
         self._collection.flush()

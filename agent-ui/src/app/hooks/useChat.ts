@@ -33,15 +33,29 @@ export function useChat({
   activeAssistant,
   onHistoryRevalidate,
   thread,
+  userId,
 }: {
   activeAssistant: Assistant | null;
   onHistoryRevalidate?: () => void;
   thread?: UseStreamThread<StateType>;
+  userId?: string;
 }) {
   const [threadId, setThreadId] = useQueryState("threadId");
   const client = useClient();
 
+  // 构建包含 user_id 的 config
+  const buildConfig = useCallback(
+    (base?: Record<string, any>) => ({
+      ...(base ?? {}),
+      recursion_limit: 100,
+      ...(userId ? { configurable: { user_id: userId } } : {}),
+    }),
+    [userId]
+  );
+
   const revalidateHistoryRef = useRef(onHistoryRevalidate);
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
 
   useEffect(() => {
     revalidateHistoryRef.current = onHistoryRevalidate;
@@ -58,6 +72,25 @@ export function useChat({
     }, 0);
   }, []);
 
+  // thread 创建后自动写入 user_id metadata
+  const handleCreated = useCallback(() => {
+    scheduleHistoryRevalidate();
+    // useStream 创建新 thread 后，onCreated 触发时 threadId 已更新
+    // 通过 setTimeout 确保 threadId 已写入 URL
+    window.setTimeout(() => {
+      const currentUserId = userIdRef.current;
+      if (!currentUserId) return;
+      // 从 URL 读取最新的 threadId
+      const params = new URLSearchParams(window.location.search);
+      const tid = params.get("threadId");
+      if (tid) {
+        client.threads.update(tid, {
+          metadata: { user_id: currentUserId },
+        }).catch(console.error);
+      }
+    }, 0);
+  }, [client, scheduleHistoryRevalidate]);
+
   const stream = useStream<StateType>({
     assistantId: activeAssistant?.assistant_id || "",
     client: client ?? undefined,
@@ -70,7 +103,7 @@ export function useChat({
     // Revalidate thread list after paint to avoid blocking the chat UI
     onFinish: scheduleHistoryRevalidate,
     onError: scheduleHistoryRevalidate,
-    onCreated: scheduleHistoryRevalidate,
+    onCreated: handleCreated,
     experimental_thread: thread,
   });
 
@@ -116,13 +149,13 @@ export function useChat({
           optimisticValues: (prev) => ({
             messages: [...(prev.messages ?? []), newMessage],
           }),
-          config: { ...(activeAssistant?.config ?? {}), recursion_limit: 100 },
+          config: buildConfig(activeAssistant?.config),
         }
       );
       // Update thread list immediately when sending a message
       onHistoryRevalidate?.();
     },
-    [stream, activeAssistant?.config, onHistoryRevalidate]
+    [stream, activeAssistant?.config, onHistoryRevalidate, buildConfig]
   );
 
   const runSingleStep = useCallback(
@@ -137,7 +170,7 @@ export function useChat({
           ...(optimisticMessages
             ? { optimisticValues: { messages: optimisticMessages } }
             : {}),
-          config: activeAssistant?.config,
+          config: buildConfig(activeAssistant?.config),
           checkpoint: checkpoint,
           ...(isRerunningSubagent
             ? { interruptAfter: ["tools"] }
@@ -146,11 +179,11 @@ export function useChat({
       } else {
         stream.submit(
           { messages },
-          { config: activeAssistant?.config, interruptBefore: ["tools"] }
+          { config: buildConfig(activeAssistant?.config), interruptBefore: ["tools"] }
         );
       }
     },
-    [stream, activeAssistant?.config]
+    [stream, activeAssistant?.config, buildConfig]
   );
 
   const setFiles = useCallback(
@@ -166,10 +199,7 @@ export function useChat({
   const continueStream = useCallback(
     (hasTaskToolCall?: boolean) => {
       stream.submit(undefined, {
-        config: {
-          ...(activeAssistant?.config || {}),
-          recursion_limit: 100,
-        },
+        config: buildConfig(activeAssistant?.config),
         ...(hasTaskToolCall
           ? { interruptAfter: ["tools"] }
           : { interruptBefore: ["tools"] }),
@@ -177,7 +207,7 @@ export function useChat({
       // Update thread list when continuing stream
       onHistoryRevalidate?.();
     },
-    [stream, activeAssistant?.config, onHistoryRevalidate]
+    [stream, activeAssistant?.config, onHistoryRevalidate, buildConfig]
   );
 
   const markCurrentThreadAsResolved = useCallback(() => {
@@ -219,4 +249,3 @@ export function useChat({
     resumeInterrupt,
   };
 }
-// @ts-expect-error  My80OmFIVnBZMlhsc3JQbGxydm5uN002UkRSYVZRPT06NTQ4NDZlNDg=

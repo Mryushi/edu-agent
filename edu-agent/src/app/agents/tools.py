@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import List, Literal, Optional
 
 from langchain_core.tools import tool
+from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 from langchain_community.tools import DuckDuckGoSearchResults
 
@@ -24,6 +25,14 @@ logger = logging.getLogger(__name__)
 
 
 # ------------------------------------------------------------------ #
+# 辅助函数
+# ------------------------------------------------------------------ #
+def _get_user_id(config: RunnableConfig | None) -> str:
+    """从 LangGraph config.configurable 中提取 user_id。"""
+    return (config or {}).get("configurable", {}).get("user_id", "default")
+
+
+# ------------------------------------------------------------------ #
 # Memory 工具
 # ------------------------------------------------------------------ #
 MemoryCategory = Literal["preference", "progress", "fact", "goal"]
@@ -31,7 +40,13 @@ MemoryCategory = Literal["preference", "progress", "fact", "goal"]
 
 class MemoryFact(BaseModel):
     """一条需要保存的记忆事实"""
-    user_quote: str = Field(description="用户原话精确引用，用于提取和保存记忆")
+    user_quote: str = Field(
+        description=(
+            "从用户原话中提炼的、值得长期记忆的信息点。"
+            "应为具体可检索的事实（如知识水平、学习偏好、目标、进度），"
+            "而非确认语、礼貌用语等无信息量内容。"
+        )
+    )
     category: Optional[MemoryCategory] = Field(
         default=None,
         description="记忆分类（仅允许：preference 偏好 / progress 进度 / fact 事实 / goal 目标）",
@@ -40,10 +55,9 @@ class MemoryFact(BaseModel):
 
 class SaveMemoryInput(BaseModel):
     """将结构化记忆事实批量保存到用户的长期记忆中"""
-    user_id: str = Field(description="用户唯一标识，用于隔离不同用户的记忆")
     facts: List[MemoryFact] = Field(description="需要保存的记忆事实列表，每条包含用户原话和可选分类")
-    conversation_answer_summary: Optional[str] = Field(
-        default=None, description="本次模型回复的总结，作为记忆上下文存入 metadata"
+    conversation_context: Optional[str] = Field(
+        default=None, description="本轮对话的核心内容摘要（1-2句），帮助记忆系统理解事实产生的上下文"
     )
     related_doc_id: Optional[str] = Field(
         default=None, description="当前讨论相关的 RAG 文档 doc_id（通过 list_knowledge_documents 获取），用于建立记忆与文档的关联"
@@ -55,11 +69,11 @@ class SaveMemoryInput(BaseModel):
 
 @tool(args_schema=SaveMemoryInput)
 def save_memory(
-    user_id: str,
     facts: List[MemoryFact],
-    conversation_answer_summary: Optional[str] = None,
+    conversation_context: Optional[str] = None,
     related_doc_id: Optional[str] = None,
     related_doc_source: Optional[str] = None,
+    config: RunnableConfig = None,
 ) -> str:
     """将重要信息结构化保存到用户的长期记忆中。
 
@@ -67,68 +81,64 @@ def save_memory(
     支持批量保存多条记忆事实，每条基于用户原话精确提取。
     当讨论围绕特定文档时，应传入 related_doc_id 和 related_doc_source 建立关联。
     """
+    user_id = _get_user_id(config)
     logger.info("[AgentTool] save_memory user=%s facts_count=%d doc_id=%s", user_id, len(facts), related_doc_id)
-    return memory_service.save_memory(user_id, facts, conversation_answer_summary, related_doc_id, related_doc_source)
+    return memory_service.save_memory(user_id, facts, conversation_context, related_doc_id, related_doc_source)
 
 
 @tool
-def delete_memory(memory_id: str, user_id: str) -> str:
+def delete_memory(memory_id: str, config: RunnableConfig = None) -> str:
     """删除指定的一条长期记忆。
 
     Args:
         memory_id: 记忆的唯一 ID，可通过 list_memories 或 search_memory 获取。
-        user_id: 用户唯一标识。
     """
+    user_id = _get_user_id(config)
     logger.info("[AgentTool] delete_memory memory_id=%s user=%s", memory_id, user_id)
     return memory_service.delete_memory(memory_id, user_id)
 
 
 @tool
-def clear_memories(user_id: str) -> str:
-    """清空用户的全部长期记忆（慎用）。
-
-    Args:
-        user_id: 用户唯一标识。
-    """
+def clear_memories(config: RunnableConfig = None) -> str:
+    """清空用户的全部长期记忆（慎用）。"""
+    user_id = _get_user_id(config)
     logger.info("[AgentTool] clear_memories user=%s", user_id)
     return memory_service.clear_memories(user_id)
 
 
 @tool
-def list_memories_by_doc(user_id: str, doc_id: str) -> str:
-    """查询与指定 RAG 文档关联的所有长期记忆。
-
-    当学生问"关于这份文档我记住了什么"或需要回顾文档学习记录时使用。
-    返回该文档相关的所有记忆，包含记忆 ID、分类和内容。
-
-    Args:
-        user_id: 用户唯一标识。
-        doc_id: 文档唯一 ID（通过 list_knowledge_documents 获取）。
-    """
-    logger.info("[AgentTool] list_memories_by_doc doc=%s user=%s", doc_id, user_id)
-    return memory_service.list_memories_by_doc(user_id, doc_id)
-
-
-@tool
-def search_memory(query: str, user_id: str, top_k: int = 5) -> str:
+def search_memory(query: str, top_k: int = 5, config: RunnableConfig = None) -> str:
     """从用户的长期记忆中检索与查询最相关的内容。
 
     Args:
         query: 检索查询，描述你想找的信息。
-        user_id: 用户唯一标识。
         top_k: 返回最相关的记忆条数，默认 5。
     """
+    user_id = _get_user_id(config)
     logger.info("[AgentTool] search_memory user=%s", user_id)
     return memory_service.search_memory(query, user_id=user_id, top_k=top_k)
 
 
 @tool
-def list_memories(user_id: str) -> str:
-    """列出用户的所有长期记忆（不经过向量检索，直接按 user_id 全量返回）。
+def search_memories_with_docs(query: str, top_k: int = 5, config: RunnableConfig = None) -> str:
+    """检索记忆并附带关联的知识库文档信息。
+
+    当学生问"我之前学过什么关于XX的"或需要查看记忆及关联文档时使用。
+    返回记忆内容及关联的知识库文档名称和 doc_id。
 
     Args:
-        user_id: 用户唯一标识。
+        query: 检索查询，描述你想找的信息。
+        top_k: 返回最相关的记忆条数，默认 5。
     """
+    user_id = _get_user_id(config)
+    logger.info("[AgentTool] search_memories_with_docs user=%s", user_id)
+    return memory_service.search_memories_with_docs(query, user_id=user_id, top_k=top_k)
+
+
+@tool
+def list_memories(config: RunnableConfig = None) -> str:
+    """列出用户的所有长期记忆（不经过向量检索，直接按 user_id 全量返回）。"""
+    user_id = _get_user_id(config)
     logger.info("[AgentTool] list_memories user=%s", user_id)
     return memory_service.list_memories(user_id)
 
@@ -137,7 +147,7 @@ def list_memories(user_id: str) -> str:
 # RAG 知识库工具
 # ------------------------------------------------------------------ #
 @tool
-def ingest_document(file_path: str, user_id: str, replace: bool = True, force: bool = False) -> str:
+def ingest_document(file_path: str, replace: bool = True, force: bool = False, config: RunnableConfig = None) -> str:
     """将本地文件以"增量入库"方式持久化到 RAG 知识库（支持 PDF / TXT / MD / DOCX）。
 
     解析文件内容 → 文本分块 → 向量化 → 存入 Milvus 知识库。
@@ -145,13 +155,13 @@ def ingest_document(file_path: str, user_id: str, replace: bool = True, force: b
 
     Args:
         file_path: 文件的绝对路径或虚拟路径（如 /uploads/xxx.pdf）。
-        user_id: 用户唯一标识，用于数据隔离。
         replace: True（默认）= 完整替换，旧文件中未出现在新文件的 chunk 会被删除；
                  False = 只更新传入的部分，保留旧文件中未被覆盖的 chunk。
                  当不确定是否上传了完整文件时，可用 replace=False 避免误删。
         force: 为 True 时跳过 shrink_ratio 完整性校验，允许强制覆盖。
                仅在上传文件明显变小时需要设为 True。
     """
+    user_id = _get_user_id(config)
     logger.info("[AgentTool] ingest_document file=%s user=%s replace=%s force=%s", file_path, user_id, replace, force)
 
     # 虚拟路径映射：/uploads/foo.pdf → 物理 workspace/uploads/foo.pdf
@@ -165,7 +175,7 @@ def ingest_document(file_path: str, user_id: str, replace: bool = True, force: b
 
 
 @tool
-def search_knowledge(query: str, user_id: str, top_k: int = 5) -> str:
+def search_knowledge(query: str, top_k: int = 5, config: RunnableConfig = None) -> str:
     """从 RAG 知识库中混合检索与问题最相关的文档片段。
 
     检索链路：dense (qwen3-embedding) ANN + sparse (Milvus BM25) → RRF 融合。
@@ -177,36 +187,33 @@ def search_knowledge(query: str, user_id: str, top_k: int = 5) -> str:
 
     Args:
         query: 检索查询（自然语言描述你想找的信息）。
-        user_id: 用户唯一标识。
         top_k: 返回最相关的片段数，默认 5。
     """
+    user_id = _get_user_id(config)
     logger.info("[AgentTool] search_knowledge user=%s", user_id)
     return rag_service.search_knowledge(query, user_id, top_k)
 
 
 @tool
-def list_knowledge_documents(user_id: str) -> str:
+def list_knowledge_documents(config: RunnableConfig = None) -> str:
     """列出用户已入库到 RAG 知识库的所有文档。
 
-    返回文件名、片段数量、入库时间和 doc_id，可用于后续删除操作。
-
-    Args:
-        user_id: 用户唯一标识。
-    """
+    返回文件名、片段数量、入库时间和 doc_id，可用于后续删除操作。"""
+    user_id = _get_user_id(config)
     logger.info("[AgentTool] list_knowledge_documents user=%s", user_id)
     return rag_service.list_documents(user_id)
 
 
 @tool
-def delete_knowledge_document(doc_id: str, user_id: str) -> str:
+def delete_knowledge_document(doc_id: str, config: RunnableConfig = None) -> str:
     """从 RAG 知识库中删除指定文档的所有片段。
 
     doc_id 可通过 list_knowledge_documents 工具获取。
 
     Args:
         doc_id: 文档唯一 ID。
-        user_id: 用户唯一标识（防止跨用户误删）。
     """
+    user_id = _get_user_id(config)
     logger.info("[AgentTool] delete_knowledge_document doc=%s user=%s", doc_id, user_id)
     return rag_service.delete_document(doc_id, user_id)
 
@@ -238,6 +245,12 @@ def web_search(query: str) -> str:
 # ------------------------------------------------------------------ #
 # PDF 工具
 # ------------------------------------------------------------------ #
+
+# PDF 文本长度阈值（字符数）
+_PDF_TEXT_LARGE_THRESHOLD = 50000   # 约 50KB，建议入库
+_PDF_TEXT_HUGE_THRESHOLD = 200000   # 约 200KB，强烈建议入库
+
+
 @tool
 def parse_pdf(file_path: str) -> str:
     """解析指定路径的 PDF 文件，提取文本内容供智能体参考。
@@ -264,18 +277,39 @@ def parse_pdf(file_path: str) -> str:
         return f"PDF 解析失败：{result.error}"
 
     text = result.text
+    text_len = len(text)
     cache_path = get_parsed_pdf_path(str(path))
 
     # 构建摘要（前 3000 字符）
     max_summary = 3000
-    if len(text) <= max_summary:
+    if text_len <= max_summary:
         summary = text
     else:
-        summary = text[:max_summary] + f"\n\n...（共 {len(text)} 字符，已截断）"
+        summary = text[:max_summary] + f"\n\n...（共 {text_len} 字符，已截断）"
+
+    # 大文件检测：根据文本长度给出不同提示
+    if text_len > _PDF_TEXT_HUGE_THRESHOLD:
+        # 超大文件：强烈建议入库
+        warning = (
+            f"\n\n⚠️ **文件过大警告**：该 PDF 解析后文本长度为 {text_len:,} 字符（约 {text_len // 1024} KB），"
+            f"如果作为上下文传入会消耗大量 token。\n\n"
+            f"**强烈建议**：使用 `ingest_document('{file_path}')` 将内容入库到知识库，"
+            f"后续可通过 `search_knowledge('关键词')` 按需检索，避免占用过多上下文。\n"
+        )
+    elif text_len > _PDF_TEXT_LARGE_THRESHOLD:
+        # 较大文件：建议入库
+        warning = (
+            f"\n\n💡 **提示**：该 PDF 解析后文本长度为 {text_len:,} 字符（约 {text_len // 1024} KB）。"
+            f"如果需要多次引用文档内容，建议使用 `ingest_document('{file_path}')` 入库，"
+            f"后续可通过 `search_knowledge` 检索，更高效且可跨会话复用。\n"
+        )
+    else:
+        warning = ""
 
     return (
         f"PDF 已解析，完整文本已保存到：{cache_path}\n"
-        f"如需入库到知识库，请使用 ingest_document 工具。\n\n"
+        f"如需入库到知识库，请使用 ingest_document 工具。\n"
+        f"{warning}\n"
         f"--- 内容摘要 ---\n{summary}"
     )
 
@@ -301,8 +335,8 @@ TOOLS = [
     parse_pdf,
     save_memory,
     search_memory,
+    search_memories_with_docs,
     list_memories,
-    list_memories_by_doc,
     delete_memory,
     clear_memories,
     ingest_document,

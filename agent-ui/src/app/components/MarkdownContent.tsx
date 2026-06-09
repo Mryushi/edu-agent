@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
-// @ts-expect-error  MC80OmFIVnBZMlhsc3JQbGxydm5uN002UzJvNFlnPT06MDQ1Y2NhMmE=
 
 interface MarkdownContentProps {
   content: string;
