@@ -54,16 +54,6 @@ yarn dev               # 默认 http://localhost:3000
 
 在设置中填入后端地址和 Assistant ID 即可使用。
 
-**前端 Docker 部署**（可选）：
-
-```bash
-cd agent-ui
-docker build -t edu-agent-ui .
-docker run -d -p 3000:3000 -e NEXT_PUBLIC_LANGGRAPH_API_URL=http://host.docker.internal:2026 edu-agent-ui
-```
-
-> 环境变量 `NEXT_PUBLIC_LANGGRAPH_API_URL` 指向后端地址，容器内需使用 `host.docker.internal` 访问宿主机服务。
-
 ### 3. Docker 部署（可选）
 
 使用 `langgraph up` 可将后端打包为 Docker 容器运行，适合生产环境部署。
@@ -74,6 +64,14 @@ cp .env.example .env   # 编辑填入 API Key（包括 LangSmith 密钥）
 
 # 构建镜像并启动容器
 langgraph up
+```
+
+启动后会显示实际端口，例如：
+
+```
+Ready!
+- API: http://localhost:8123
+- Docs: http://localhost:8123/docs
 ```
 
 **LangSmith 配置**：`langgraph up` 需要 LangSmith API Key，在 `.env` 中填写：
@@ -89,6 +87,16 @@ LANGSMITH_TRACING=true
 MILVUS_URL=http://host.docker.internal:19530
 OLLAMA_BASE_URL=http://host.docker.internal:11434
 ```
+
+**前端 Docker 部署**（可选）：
+
+```bash
+cd agent-ui
+docker build -t edu-agent-ui .
+docker run -d -p 3000:3000 -e NEXT_PUBLIC_LANGGRAPH_API_URL=http://host.docker.internal:8123 edu-agent-ui
+```
+
+> 环境变量 `NEXT_PUBLIC_LANGGRAPH_API_URL` 指向后端地址，端口需与 `langgraph up` 启动时显示的一致。容器内需使用 `host.docker.internal` 访问宿主机服务。
 
 **Dockerfile 说明**（[edu-agent/Dockerfile](edu-agent/Dockerfile)）：
 - 基础镜像：`langchain/langgraph-api:3.13`（Wolfi Linux）
