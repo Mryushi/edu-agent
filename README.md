@@ -21,7 +21,7 @@ AI 驱动的教育辅导智能体平台，支持多模型对话、文档解析�
 
 ```bash
 # 安装 Ollama 后拉取嵌入模型
-ollama pull nomic-embed-text
+ollama pull qwen3-embedding:0.6b
 ```
 
 ## 快速开始
