@@ -1,0 +1,10 @@
+services:
+  edu-agent:
+    build: .
+    ports:
+      - "2026:2026"
+    env_file:
+      - .env
+    volumes:
+      - ./src/app/workspace:/deps/src/app/workspace
+    restart: unless-stopped
