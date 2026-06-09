@@ -13,22 +13,20 @@ AI 驱动的教育辅导智能体平台，支持多模型对话、文档解析�
 
 ### Milvus 向量数据库
 
-项目依赖 Milvus 存储 RAG 知识库和 mem0 长期记忆。推荐使用 Docker 部署 Milvus Standalone：
+项目依赖 Milvus 存储 RAG 知识库和 mem0 长期记忆。Windows 环境推荐使用 Docker Desktop：
+
+**前置条件**：安装 [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/)，并启用 WSL 2 后端，内存建议分配 4GB+。
 
 ```bash
-# 一键启动（自动下载并启动 Milvus）
-curl -sfL https://raw.githubusercontent.com/milvus-io/milvus/master/scripts/standalone_embed.sh -o standalone_embed.sh
-bash standalone_embed.sh start
-```
+# 下载官方 Docker Compose 文件
+mkdir milvus && cd milvus
+curl -o docker-compose.yml https://raw.githubusercontent.com/milvus-io/milvus/master/scripts/standalone_embed/docker-compose.yml
 
-或使用 Docker Compose（[docker-compose.yml](https://milvus.io/docs/install_standalone-docker.md)）：
+# 启动 Milvus Standalone
+docker compose up -d
 
-```bash
-docker run -d --name milvus \
-  -p 19530:19530 -p 9091:9091 \
-  -v milvus:/var/lib/milvus \
-  milvusdb/milvus:v2.5-latest \
-  milvus run standalone
+# 验证运行状态
+docker compose ps
 ```
 
 启动后可通过 [Attu](https://github.com/zilliztech/attu) Web UI 管理：
@@ -37,7 +35,7 @@ docker run -d --name milvus \
 docker run -d -p 8000:3000 -e MILVUS_URL=host.docker.internal:19530 zilliz/attu:latest
 ```
 
-> 默认端口：`19530`（gRPC）、`9091`（指标）。详细文档见 [Milvus 安装指南](https://milvus.io/docs/install_standalone-docker.md)。
+> 默认端口：`19530`（gRPC）、`9091`（指标）。详细文档见 [Milvus Windows 安装指南](https://milvus.io/docs/zh/install_standalone-windows.md)。
 
 ### Ollama（可选，用于本地嵌入）
 
