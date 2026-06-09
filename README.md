@@ -54,6 +54,16 @@ yarn dev               # 默认 http://localhost:3000
 
 在设置中填入后端地址和 Assistant ID 即可使用。
 
+**前端 Docker 部署**（可选）：
+
+```bash
+cd agent-ui
+docker build -t edu-agent-ui .
+docker run -d -p 3000:3000 -e NEXT_PUBLIC_LANGGRAPH_API_URL=http://host.docker.internal:2026 edu-agent-ui
+```
+
+> 环境变量 `NEXT_PUBLIC_LANGGRAPH_API_URL` 指向后端地址，容器内需使用 `host.docker.internal` 访问宿主机服务。
+
 ### 3. Docker 部署（可选）
 
 使用 `langgraph up` 可将后端打包为 Docker 容器运行，适合生产环境部署。
