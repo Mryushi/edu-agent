@@ -1,10 +1,27 @@
 services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: edu_agent
+      POSTGRES_PASSWORD: edu_agent_pass
+      POSTGRES_DB: edu_agent
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
   edu-agent:
     build: .
     ports:
       - "2026:2026"
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgresql://edu_agent:edu_agent_pass@postgres:5432/edu_agent
     volumes:
       - ./src/app/workspace:/deps/src/app/workspace
+    depends_on:
+      - postgres
     restart: unless-stopped
+
+volumes:
+  pgdata:
