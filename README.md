@@ -21,10 +21,16 @@ uv sync
 # 开发模式（支持热重载，默认 localhost:2026）
 langgraph dev
 
-# 生产模式
+# 生产模式（Docker 容器）
 langgraph up
 
 ```
+
+> **Docker 网络提示**：`langgraph up` 在 Docker 容器内运行，容器内的 `localhost` 指向容器自身而非宿主机。若 Milvus、Ollama 等服务运行在宿主机上，需将 `.env` 中的 `localhost` 改为 `host.docker.internal`：
+> ```env
+> MILVUS_URL=http://host.docker.internal:19530
+> OLLAMA_BASE_URL=http://host.docker.internal:11434
+> ```
 
 服务默认运行在 http://localhost:2026
 
@@ -59,7 +65,7 @@ EMBEDDING_PROVIDER=ollama
 # Ollama 嵌入配置
 EMBEDDING_MODEL=qwen3-embedding:0.6b
 EMBEDDING_DIMS=1024
-OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_BASE_URL=http://localhost:11434       # Docker 部署时改为 host.docker.internal
 
 # OpenAI 兼容接口配置（当 EMBEDDING_PROVIDER=openai 时使用）
 OPENAI_EMBEDDING_API_KEY=your_api_key
