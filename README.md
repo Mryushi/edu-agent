@@ -31,6 +31,11 @@ ollama pull qwen3-embedding:0.6b
 ```bash
 cd edu-agent
 cp .env.example .env   # 编辑填入 API Key
+
+# 安装 LangGraph CLI（如未安装）
+pip install langgraph-cli
+# 或 uv tool install langgraph-cli
+
 uv sync
 
 # 开发模式（支持热重载，默认 localhost:2026）
