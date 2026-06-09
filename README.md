@@ -21,11 +21,9 @@ uv sync
 # 开发模式（支持热重载，默认 localhost:2026）
 langgraph dev
 
-# 生产模式（默认仅监听 localhost，外部无法访问）
+# 生产模式
 langgraph up
 
-# 生产模式（允许外部访问，绑定 0.0.0.0）
-langgraph up --host 0.0.0.0
 ```
 
 服务默认运行在 http://localhost:2026
@@ -73,22 +71,3 @@ OPENAI_EMBEDDING_DIMS=1536
 ### 其他配置
 
 参见 [edu-agent/.env.example](edu-agent/.env.example) 获取完整配置项说明。
-
-## 架构概览
-
-```
-edu-agent/
-├── src/app/
-│   ├── agents/          # Agent 定义和工具注册
-│   ├── middleware/       # 中间件（PDF 上下文注入等）
-│   ├── services/        # 业务逻辑层
-│   ├── repositories/    # 数据访问层
-│   ├── tools/           # 工具模块（文件解析、分块等）
-│   ├── core/            # 配置和模型工厂
-│   └── workspace/       # 运行时文件存储
-└── start_server.py      # 服务启动脚本
-```
-
-## 许可证
-
-MIT
