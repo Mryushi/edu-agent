@@ -248,7 +248,7 @@ class KnowledgeRepository:
 # ------------------------------------------------------------------ #
 def _create_default_store() -> MilvusVectorStore:
     """创建默认的 RAG MilvusVectorStore（懒加载）。"""
-    dim = settings.RAG_DENSE_EMBEDDING_DIMS
+    dim = settings.embedding_dimensions
     fields = [
         FieldSchema("id", DataType.VARCHAR, max_length=_MAX_ID_LEN, is_primary=True),
         FieldSchema(

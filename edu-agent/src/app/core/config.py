@@ -107,10 +107,17 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
         extra = "ignore"
 
+    @property
+    def embedding_dimensions(self) -> int:
+        """根据 EMBEDDING_PROVIDER 返回对应的向量维度"""
+        if self.EMBEDDING_PROVIDER.lower() == "openai":
+            return self.OPENAI_EMBEDDING_DIMS or self.EMBEDDING_DIMS
+        return self.EMBEDDING_DIMS
+
     def get_mem0_config(self) -> Dict[str, Any]:
         """获取 mem0 配置（复用嵌入模型配置）"""
-        # 嵌入维度：优先使用 OpenAI 维度配置，否则使用通用维度
-        embedding_dims = self.OPENAI_EMBEDDING_DIMS or self.EMBEDDING_DIMS
+        # 嵌入维度：根据 EMBEDDING_PROVIDER 选择对应配置
+        embedding_dims = self.embedding_dimensions
 
         vector_store_cfg: Dict[str, Any] = {
             "collection_name": self.MEM0_COLLECTION,

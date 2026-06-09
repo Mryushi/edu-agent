@@ -68,11 +68,16 @@ def create_rag_dense_embedder():
 
 def _create_ollama_embedding():
     """创建 Ollama 嵌入模型"""
+    model = settings.EMBEDDING_MODEL
+    base_url = settings.OLLAMA_BASE_URL
+    dimensions = settings.embedding_dimensions
+
     try:
         from langchain_ollama import OllamaEmbeddings
         return OllamaEmbeddings(
-            model=settings.EMBEDDING_MODEL,
-            base_url=settings.OLLAMA_BASE_URL,
+            model=model,
+            base_url=base_url,
+            dimensions=dimensions,
         )
     except ImportError:
         logger.error("langchain_ollama not available, RAG embeddings will not work")
@@ -101,8 +106,8 @@ def _create_openai_embedding():
             "OPENAI_EMBEDDING_BASE_URL, OPENAI_EMBEDDING_MODEL"
         )
 
-    # 优先使用 OpenAI 专用维度配置，否则使用通用维度配置
-    dimensions = settings.OPENAI_EMBEDDING_DIMS or settings.EMBEDDING_DIMS
+    # 根据 EMBEDDING_PROVIDER 选择对应维度配置
+    dimensions = settings.embedding_dimensions
 
     try:
         return OpenAIEmbeddings(
@@ -110,6 +115,7 @@ def _create_openai_embedding():
             openai_api_key=api_key,
             openai_api_base=base_url,
             dimensions=dimensions,
+            check_embedding_ctx_length=False,  # 非 OpenAI 供应商直接发送原始文本，绕过 tiktoken
         )
     except Exception as e:
         logger.error(f"Failed to create OpenAI embedding model: {e}")
