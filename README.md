@@ -9,6 +9,45 @@ AI 驱动的教育辅导智能体平台，支持多模型对话、文档解析�
 | [edu-agent/](edu-agent/) | AI 教育辅导 agent 后端 | Python 3.13+, LangGraph, Milvus, mem0 |
 | [agent-ui/](agent-ui/) | Web 聊天交互界面 | Next.js 16, React 19, Tailwind（基于 [Deep Agents UI](https://github.com/langchain-ai/deep-agents-ui)） |
 
+## 环境准备
+
+### Milvus 向量数据库
+
+项目依赖 Milvus 存储 RAG 知识库和 mem0 长期记忆。推荐使用 Docker 部署 Milvus Standalone：
+
+```bash
+# 一键启动（自动下载并启动 Milvus）
+curl -sfL https://raw.githubusercontent.com/milvus-io/milvus/master/scripts/standalone_embed.sh -o standalone_embed.sh
+bash standalone_embed.sh start
+```
+
+或使用 Docker Compose（[docker-compose.yml](https://milvus.io/docs/install_standalone-docker.md)）：
+
+```bash
+docker run -d --name milvus \
+  -p 19530:19530 -p 9091:9091 \
+  -v milvus:/var/lib/milvus \
+  milvusdb/milvus:v2.5-latest \
+  milvus run standalone
+```
+
+启动后可通过 [Attu](https://github.com/zilliztech/attu) Web UI 管理：
+
+```bash
+docker run -d -p 8000:3000 -e MILVUS_URL=host.docker.internal:19530 zilliz/attu:latest
+```
+
+> 默认端口：`19530`（gRPC）、`9091`（指标）。详细文档见 [Milvus 安装指南](https://milvus.io/docs/install_standalone-docker.md)。
+
+### Ollama（可选，用于本地嵌入）
+
+若使用 Ollama 作为嵌入模型提供商：
+
+```bash
+# 安装 Ollama 后拉取嵌入模型
+ollama pull nomic-embed-text
+```
+
 ## 快速开始
 
 ### 1. 启动后端
