@@ -70,10 +70,17 @@ docker run -d -p 3000:3000 -e NEXT_PUBLIC_LANGGRAPH_API_URL=http://host.docker.i
 
 ```bash
 cd edu-agent
-cp .env.example .env   # 编辑填入 API Key
+cp .env.example .env   # 编辑填入 API Key（包括 LangSmith 密钥）
 
 # 构建镜像并启动容器
 langgraph up
+```
+
+**LangSmith 配置**：`langgraph up` 需要 LangSmith API Key，在 `.env` 中填写：
+
+```env
+LANGSMITH_API_KEY=lsv2_pt_xxxxx    # 从 https://smith.langchain.com 获取
+LANGSMITH_TRACING=true
 ```
 
 **网络配置**：容器内的 `localhost` 指向容器自身，若 Milvus、Ollama 等服务运行在宿主机上，需修改 `.env`：
