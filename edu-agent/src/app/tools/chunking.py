@@ -17,6 +17,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,9 @@ logger = logging.getLogger(__name__)
 # 任何超过该值的 chunk 会按安全边界进一步拆分，避免 Repository 静默截断。
 # 可通过环境变量 RAG_CHUNK_MAX_LEN 覆盖，默认 4000。
 _MAX_SAFE_TEXT_LEN = settings.RAG_CHUNK_MAX_LEN
+
+# Milvus VARCHAR 硬上限，不可配置，作为最终兜底。
+_MILVUS_VARCHAR_MAX = 4096
 
 
 @dataclass
@@ -143,6 +147,9 @@ def split_text(
 
     # Step 5: 长度安全切分（避免 Milvus VARCHAR 静默截断）
     pieces = _enforce_max_length(pieces, _MAX_SAFE_TEXT_LEN)
+
+    # Step 5b: Milvus 硬上限兜底，确保绝不超 4096（_MAX_SAFE_TEXT_LEN 可能被误配）
+    pieces = _enforce_max_length(pieces, _MILVUS_VARCHAR_MAX)
 
     # Step 6: 构建 Chunk 对象
     base_meta = extra_metadata or {}
@@ -367,25 +374,13 @@ def _enforce_max_length(pieces: list[_Piece], max_len: int) -> list[_Piece]:
 
 
 def _split_at_safe_boundary(text: str, max_len: int) -> list[str]:
-    """优先按句末/换行切，最后兜底硬截断。"""
+    """使用 LangChain 递归分割器按语义边界切分文本。"""
     if len(text) <= max_len:
         return [text]
-
-    pieces: list[str] = []
-    remaining = text
-    while len(remaining) > max_len:
-        window = remaining[:max_len]
-        # 优先切在最后一个换行处
-        cut = window.rfind("\n")
-        if cut < max_len // 2:
-            # 退一步切句末标点
-            sentence_break = max(
-                window.rfind("。"), window.rfind("！"), window.rfind("？"),
-                window.rfind("."), window.rfind("!"), window.rfind("?"),
-            )
-            cut = sentence_break + 1 if sentence_break >= max_len // 2 else max_len
-        pieces.append(remaining[:cut].rstrip())
-        remaining = remaining[cut:].lstrip()
-    if remaining:
-        pieces.append(remaining)
-    return pieces
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=max_len,
+        chunk_overlap=0,
+        separators=["\n\n", "\n", "。", "！", "？", ".", "!", "?", "；", ";", "，", ",", " ", ""],
+        keep_separator=True,
+    )
+    return splitter.split_text(text)
