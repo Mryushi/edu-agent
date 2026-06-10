@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 _MAX_SAFE_TEXT_LEN = settings.RAG_CHUNK_MAX_LEN
 
 # Milvus VARCHAR 硬上限，不可配置，作为最终兜底。
-_MILVUS_VARCHAR_MAX = 4096
+_MILVUS_VARCHAR_MAX = 65535
 
 
 @dataclass
