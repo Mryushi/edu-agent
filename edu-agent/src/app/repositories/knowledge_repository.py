@@ -32,7 +32,7 @@ from app.db.milvus_store import MilvusVectorStore
 
 logger = logging.getLogger(__name__)
 
-_MAX_TEXT_LEN = 4096
+_MAX_TEXT_LEN = 65535
 _MAX_ID_LEN = 64
 _MAX_STR_LEN = 256
 _MAX_SECTION_PATH_LEN = 512
